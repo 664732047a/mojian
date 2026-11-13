@@ -1,0 +1,1 @@
+https://raw.githubusercontent.com/KaTeX/KaTeX/v0.16.9/LICENSE

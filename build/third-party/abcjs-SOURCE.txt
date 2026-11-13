@@ -1,0 +1,1 @@
+https://raw.githubusercontent.com/paulrosen/abcjs/v5.10.3/LICENSE.md
