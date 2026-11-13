@@ -5,7 +5,7 @@ await cp('node_modules/vditor/dist', 'dist/vditor/dist', { recursive: true });
 await mkdir('dist/third-party', { recursive: true });
 await cp('node_modules/vditor/LICENSE', 'dist/third-party/Vditor-LICENSE.txt');
 await cp('node_modules/diff-match-patch/LICENSE', 'dist/third-party/diff-match-patch-LICENSE.txt');
-await cp('node_modules/electron/dist/LICENSE', 'dist/third-party/Electron-LICENSE.txt');
+await cp(`node_modules/electron/dist/${process.platform === 'win32' ? 'LICENSE.txt' : 'LICENSE'}`, 'dist/third-party/Electron-LICENSE.txt');
 await cp('node_modules/electron/dist/LICENSES.chromium.html', 'dist/third-party/Electron-LICENSES.chromium.html');
 await cp('build/third-party', 'dist/third-party', { recursive: true });
 await cp('THIRD_PARTY_NOTICES.md', 'dist/third-party/THIRD_PARTY_NOTICES.md');
