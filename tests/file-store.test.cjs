@@ -31,7 +31,7 @@ test('saving replaces the full Unicode document and preserves its permissions', 
   await fs.writeFile(filePath, '# 旧文档', { mode: 0o600 });
   await atomicWrite(filePath, '# 新文档\n\n一段没有丢失的中文。\n');
   assert.equal(await fs.readFile(filePath, 'utf8'), '# 新文档\n\n一段没有丢失的中文。\n');
-  assert.equal((await fs.stat(filePath)).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') assert.equal((await fs.stat(filePath)).mode & 0o777, 0o600);
   assert.deepEqual(await fs.readdir(directory), ['中文 空格.md']);
 });
 
@@ -44,7 +44,7 @@ test('folder browser includes Markdown and skips hidden, generated and symbolic-
   await fs.writeFile(path.join(directory, 'welcome.MD'), 'hello');
   await fs.writeFile(path.join(directory, 'image.png'), 'image');
   await fs.writeFile(path.join(directory, 'node_modules', 'dependency.md'), 'ignore');
-  await fs.symlink(path.join(directory, '笔记'), path.join(directory, 'shortcut'));
+  await fs.symlink(path.join(directory, '笔记'), path.join(directory, 'shortcut'), process.platform === 'win32' ? 'junction' : 'dir');
   const nodes = await listTree(directory);
   assert.deepEqual(nodes.map(node => [node.name, node.type]), [['笔记', 'directory'], ['welcome.MD', 'file']]);
   assert.equal(nodes[0].children[0].name, '日记.md');

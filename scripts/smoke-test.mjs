@@ -99,7 +99,7 @@ try {
     await execute('source');
     const editable = page.locator('#editor [contenteditable="true"]:visible').first();
     await editable.click();
-    await page.keyboard.press('Meta+End');
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+End' : 'Control+End');
     await page.keyboard.press('End');
     await page.keyboard.insertText('\n\n键盘输入验证：中文、English、123。');
     await waitForValue('键盘输入验证');
@@ -244,7 +244,7 @@ try {
     }
     await execute('source');
     await page.locator('#editor [contenteditable="true"]:visible').first().click();
-    await page.keyboard.press('Meta+End');
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+End' : 'Control+End');
     await page.keyboard.press('End');
     await page.keyboard.insertText('\n\n来源新内容覆盖目标。');
     await waitForValue('来源新内容覆盖目标');

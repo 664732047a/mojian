@@ -1,5 +1,6 @@
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 await mkdir('dist/vditor/dist', { recursive: true });
+await cp('build/icon.png', 'dist/icon.png');
 await cp('node_modules/vditor/dist', 'dist/vditor/dist', { recursive: true });
 await mkdir('dist/third-party', { recursive: true });
 await cp('node_modules/vditor/LICENSE', 'dist/third-party/Vditor-LICENSE.txt');

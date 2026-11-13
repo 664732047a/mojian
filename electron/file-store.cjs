@@ -1,6 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { validateDocumentName } = require('./platform.cjs');
 const { fileURLToPath } = require('node:url');
 
 const MARKDOWN_EXTENSIONS = new Set(['.md', '.markdown', '.mdown', '.mkd', '.mkdn', '.mdx', '.txt']);
@@ -188,9 +189,7 @@ class VersionStore {
 }
 
 async function createMarkdownFile(directory, suppliedName) {
-  if (typeof suppliedName !== 'string') throw new Error('请输入文稿名称。');
-  let name = suppliedName.trim();
-  if (!name || name.length > 200 || name.startsWith('.') || /[\\/\x00-\x1f:]/.test(name)) throw new Error('名称不能包含斜杠、冒号或以点开头。');
+  let name = validateDocumentName(suppliedName);
   if (!path.extname(name)) name += '.md';
   if (!MARKDOWN_EXTENSIONS.has(path.extname(name).toLowerCase())) throw new Error('请使用 .md 或 .markdown 等文稿扩展名。');
   const filePath = path.join(directory, name);

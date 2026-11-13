@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('desktop', {
   openFile: () => invoke('open-file'),
   openFolder: () => invoke('open-folder'),
   readFile: path => invoke('read-file', path),
+  readRelativeFile: options => invoke('read-relative-file', options),
   saveFile: options => invoke('save-file', options),
   listFolder: path => invoke('list-folder', path),
   watchFolder: path => invoke('watch-folder', path),

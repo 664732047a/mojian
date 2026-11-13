@@ -52,11 +52,12 @@ try{
  await check('非当前文件夹仍会监测文件变化和更新数量',async()=>{
   await page.locator('.workspace-select').filter({hasText:'日记'}).click();
   await writeFile(path.join(english,'外部新增.md'),'# 外部文稿');
-  await page.waitForFunction(()=>window.__mojian.getState().workspaces.find(folder=>folder.path.endsWith('/英语'))?.fileCount===5);
+  await page.waitForFunction(()=>window.__mojian.getState().workspaces.find(folder=>folder.path.replace(/\\/g,'/').endsWith('/英语'))?.fileCount===5);
   assert.match(await page.locator('.file-tree').innerText(),/日记\.md/);
  });
  await check('移除和重新添加文件夹，不删除文件，不重复添加',async()=>{
   await page.locator('.workspace-row').filter({hasText:'英语'}).locator('.workspace-remove').click();
+  await waitForAsync(async()=>await page.locator('.workspace-row').count()===1);
   assert.equal(await page.locator('.workspace-row').count(),1);assert.ok((await stat(sample)).isFile());
   await chooseOpen(english);await execute('open-folder');await chooseOpen(english);await execute('open-folder');
   assert.equal(await page.locator('.workspace-row').count(),2);

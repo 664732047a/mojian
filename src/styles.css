@@ -80,6 +80,10 @@ a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset:
 .app-shell { display: flex; flex-direction: column; height: 100vh; min-width: 680px; background: var(--paper); }
 .titlebar { height: 53px; min-height: 53px; display: flex; align-items: center; gap: 18px; padding: 0 18px 0 20px; border-bottom: 1px solid var(--line); background: var(--paper); -webkit-app-region: drag; user-select: none; }
 .window-spacer { width: 68px; flex: 0 0 68px; }
+:root:not([data-platform='darwin']) .window-spacer { display: none; }
+:root[data-platform='win32'] { font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif; }
+:root[data-platform='win32'] .titlebar { height: 48px; min-height: 48px; }
+:root[data-platform='win32'] .sidebar-search > span { font-size: 9px; white-space: nowrap; }
 .brand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; letter-spacing: 2px; white-space: nowrap; color: var(--text); }
 .brand svg { color: var(--accent); width: 21px; height: 21px; }
 .brand small, .brand-tag { font-family: Georgia, serif; font-size: 10px; letter-spacing: 2px; font-weight: 400; color: var(--text-muted); margin-left: 4px; }

@@ -1,8 +1,8 @@
 {
   "name": "mojian",
   "productName": "墨笺",
-  "version": "1.1.0",
-  "description": "安静、流畅、完全本地的 Markdown 写作空间",
+  "version": "1.2.0",
+  "description": "适用于 Windows 与 macOS 的本地 Markdown 写作空间",
   "author": "Mojian",
   "license": "MIT",
   "private": true,
@@ -16,7 +16,8 @@
     "test:app": "node scripts/smoke-test.mjs",
     "test:workspace": "node scripts/workspace-smoke-test.mjs",
     "package": "npm run build && electron-builder --mac dmg --arm64",
-    "package:dir": "npm run build && electron-builder --mac dir --arm64"
+    "package:dir": "npm run build && electron-builder --mac dir --arm64",
+    "package:win": "npm run build && electron-builder --win nsis --x64 --publish never"
   },
   "dependencies": {
     "vditor": "3.11.3"
@@ -41,6 +42,24 @@
     ],
     "asar": true,
     "npmRebuild": false,
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.ico",
+      "executableName": "Mojian",
+      "artifactName": "Mojian-${version}-windows-${arch}-setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "墨笺",
+      "uninstallDisplayName": "墨笺 Mojian",
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": ["zh_CN", "en_US"],
+      "runAfterFinish": true
+    },
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "build/icon.icns",

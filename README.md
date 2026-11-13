@@ -1,6 +1,8 @@
-# 墨笺 · Mojian 1.1
+# 墨笺 · Mojian 1.2
 
 [下载安装包](https://github.com/664732047a/mojian/releases/latest) · [查看源码](https://github.com/664732047a/mojian)
+
+现在提供 **Windows 10/11 x64** 与 **Apple 芯片 Mac** 两个版本。Windows 用户下载 `*-windows-x64-setup.exe`，双击按步骤安装；Mac 用户下载 `.dmg`。Windows 安装版会创建开始菜单和桌面快捷方式，支持选择安装位置。Windows 使用 `Ctrl` 快捷键，Mac 使用 `⌘` 快捷键。
 
 本次更新：普通代码块只显示一份可编辑内容；触摸板双指张开或合拢可缩放正文（60%–240%），点击底部百分比恢复 100%。缩放比例会记住。
 
@@ -10,7 +12,7 @@
 
 从安装盘直接启动时，软件会询问是否安装到「应用程序」。安装后的版本会向 macOS 注册，以便在应用程序列表中找到。
 
-一款在自己的 Mac 上使用的 Markdown 写作软件。即时渲染让标题、列表、表格和公式在写作时直接呈现；需要精确调整时，可以切换到 Markdown 源码。
+一款在自己的电脑上使用的 Markdown 写作软件。即时渲染让标题、列表、表格和公式在写作时直接呈现；需要精确调整时，可以切换到 Markdown 源码。
 
 ## 安装
 
@@ -53,7 +55,7 @@
 
 ## 本地开发与打包
 
-需要 macOS、Node.js 22 或更新版本和可用的 Xcode 命令行工具。
+需要 Node.js 22 或更新版本。Windows 可直接开发、测试和打包 Windows 安装版；macOS 打包还需要可用的 Xcode 命令行工具。
 
 ```sh
 npm install
@@ -68,6 +70,15 @@ npm run package
 ```
 
 安装包默认面向 Apple 芯片 Mac，实际交付的文件名与版本号以 `release` 目录里的产物为准。
+
+在 Windows 上生成安装包：
+
+```sh
+npm ci
+npm run package:win
+```
+
+仓库的 Windows 构建会在 Windows 环境中执行存储测试，生成并安装 `.exe`，再启动安装后的软件进行桌面测试。只有测试成功的安装包才会上传到版本草稿，发布后可在 Releases 下载。Windows 安装包目前没有商业代码签名证书。
 
 运行验证：
 

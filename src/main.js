@@ -2,8 +2,11 @@ import Vditor from 'vditor';
 import './styles.css';
 import { icon } from './icons.js';
 import { welcome, markdownGuide } from './welcome.js';
+import { basename, shortPath, formatShortcut, localImageUrl } from './platform.js';
 
 const api = window.desktop;
+document.documentElement.dataset.platform = api.platform;
+const shortcut = text => formatShortcut(text, api.platform);
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -18,7 +21,7 @@ const cdn = new URL('vditor', location.href).href.replace(/\/$/,'');
 const findState = {query:'',index:0,matches:[],ranges:[]};
 
 function button(action, glyph, label, extra='') {
-  return `<button class="icon-button ${extra}" data-action="${action}" title="${label}" aria-label="${label}">${icon(glyph)}</button>`;
+  return `<button class="icon-button ${extra}" data-action="${action}" title="${shortcut(label)}" aria-label="${shortcut(label)}">${icon(glyph)}</button>`;
 }
 
 $('#app').innerHTML = `<div class="app-shell">
@@ -29,13 +32,13 @@ $('#app').innerHTML = `<div class="app-shell">
   <div class="workspace">
     <aside class="sidebar"><div class="sidebar-header"><div class="workspace-name" id="workspace-name">${icon('folder')}我的文件夹</div><div class="sidebar-actions">${button('open-folder','folder','添加文件夹')}${button('new-file','plus','在当前文件夹新建文稿')}</div></div>
       <div class="sidebar-tabs"><button data-action="tab-files" class="active">文稿</button><button data-action="tab-recent">最近打开</button></div>
-      <label class="sidebar-search">${icon('search')}<input id="file-filter" placeholder="搜索文件名…" aria-label="搜索文件名"><span>⌘P</span></label>
+      <label class="sidebar-search">${icon('search')}<input id="file-filter" placeholder="搜索文件名…" aria-label="搜索文件名"><span>${shortcut('⌘P')}</span></label>
       <div class="sidebar-scroll" id="sidebar-content"></div>
-      <div class="sidebar-footer"><div class="sidebar-bottom-card"><div class="card-icon">${icon('sparkle')}</div><strong>专注于此刻的想法</strong><p>文稿保存在你的 Mac。<br>无需账号，打开就能写。</p></div><div class="sidebar-footer-bottom"><span>本地写作 · 1.1</span>${button('preferences','settings','偏好设置 ⌘,')}</div></div>
+      <div class="sidebar-footer"><div class="sidebar-bottom-card"><div class="card-icon">${icon('sparkle')}</div><strong>专注于此刻的想法</strong><p>文稿保存在你的电脑。<br>无需账号，打开就能写。</p></div><div class="sidebar-footer-bottom"><span>本地写作 · 1.2</span>${button('preferences','settings','偏好设置 ⌘,')}</div></div>
     </aside>
     <main class="main-area"><div class="tabs-bar" id="tabs"></div>
       <div class="editor-toolbar"><div class="toolbar-group"><button class="toolbar-button heading-button" data-action="headings" title="标题级别">正文 ${icon('down')}</button><span class="toolbar-divider"></span>${button('bold','bold','加粗 ⌘B')}${button('italic','italic','斜体 ⌘I')}${button('strike','strike','删除线')}<span class="toolbar-divider"></span>${button('quote','quote','引用')}${button('list','list','无序列表')}${button('check','check','任务清单')}<span class="toolbar-divider"></span>${button('link','link','插入链接')}${button('image','image','插入图片')}${button('table','table','插入表格')}${button('code','code','代码块')}</div>
-      <div class="mode-switch"><button data-action="instant" class="active" title="即时渲染">写作</button><button data-action="source" title="Markdown 源码 ⌘/">源码</button><button data-action="preview" title="源码与预览">分屏</button></div></div>
+      <div class="mode-switch"><button data-action="instant" class="active" title="即时渲染">写作</button><button data-action="source" title="${shortcut('Markdown 源码 ⌘/')}">源码</button><button data-action="preview" title="源码与预览">分屏</button></div></div>
       <div class="find-bar" hidden><div class="find-input-wrap">${icon('search')}<input id="find-input" placeholder="查找文字" aria-label="查找文字"><span class="find-count">0 处</span></div>${button('find-prev','up','上一处')}${button('find-next','down','下一处')}<button class="button small" data-action="show-replace">替换</button>${button('close-find','close','关闭查找')}<div class="replace-fields" hidden><input id="replace-input" placeholder="替换为" aria-label="替换为"><button class="button small" data-action="replace-one">替换</button><button class="button small" data-action="replace-all">全部替换</button></div></div>
       <div class="editor-layout"><div class="editor-pane"><div id="editor"></div></div><aside class="outline-panel"><div class="outline-header">文稿大纲<span>CONTENTS</span></div><nav id="outline-content"></nav><div class="outline-note">在文字里，找到方向。</div></aside></div>
       <footer class="statusbar"><div class="status-left"><span class="status-indicator"></span><span id="save-status">已就绪</span><button data-action="history" title="查看历史版本">${icon('history')}</button></div><div class="status-right"><span id="word-count"></span><span id="reading-time"></span><button data-action="reset-zoom" id="zoom-status" title="双指缩放正文；点击恢复 100%">100%</button><button data-action="source" class="status-pill" id="mode-status">即时渲染</button><span class="encoding">UTF-8</span></div></footer>
@@ -122,7 +125,7 @@ async function refreshWorkspace(path=state.folder) {
 
 function renderTabs() {
   $('#tabs').innerHTML=state.documents.map(doc=>`<div class="document-tab ${doc.id===state.activeId?'active':''}" data-document="${doc.id}" role="tab" aria-selected="${doc.id===state.activeId}" title="${escape(doc.path||doc.name)}"><span class="tab-icon">${icon(doc.guide?'leaf':'file')}</span><span class="tab-name">${escape(doc.name.replace(/\.md$/i,''))}</span>${doc.dirty?'<span class="tab-dot"></span>':''}<button class="tab-close" data-close="${doc.id}" aria-label="关闭 ${escape(doc.name)}">${icon('close')}</button></div>`).join('')+`<button class="new-tab" data-action="new" aria-label="新建文稿">${icon('plus')}</button>`;
-  const doc=active();$('#window-title').textContent=doc?.path?doc.path.split('/').slice(-2).join(' / '):doc?.name||'墨笺';
+  const doc=active();$('#window-title').textContent=doc?.path?shortPath(doc.path):doc?.name||'墨笺';
   document.title=`${doc?.dirty?'● ':''}${doc?.name||'墨笺'} — 墨笺`;
 }
 function treeHTML(nodes,depth=0) {
@@ -142,8 +145,8 @@ function renderSidebar() {
   if(state.sidebarTab==='recent') {
     $('#sidebar-content').innerHTML=`<div class="section-label">最近的文字</div><div class="recent-list">${state.recent.filter(doc=>doc.name.toLowerCase().includes(state.filter.toLowerCase())).map(doc=>`<button class="recent-item" data-path="${escape(doc.path)}"><strong>${escape(doc.name)}</strong><small>${escape(doc.path.replace(/^\/Users\/[^/]+/,'~'))}</small></button>`).join('')||'<p class="sidebar-empty">打开的文稿会出现在这里。</p>'}</div>`;return;
   }
-  let html=`<div class="section-label">文件夹 <span>${state.workspaces.length}</span></div><div class="workspace-list">${state.workspaces.map(folder=>`<div class="workspace-row ${folder.path===state.folder?'active':''}"><button class="workspace-select" data-workspace="${escape(folder.path)}" title="${escape(folder.path)}">${icon('folder')}<span>${escape(folder.path.split('/').pop())}</span><small class="workspace-count">${countFiles(folder.tree)}</small></button><button class="workspace-remove" data-remove-workspace="${escape(folder.path)}" title="从列表移除，保留磁盘文件" aria-label="移除文件夹">${icon('close')}</button></div>`).join('')}</div>`;
-  if(state.folder) html+=`<div class="folder-files-header"><span title="${escape(state.selectedDirectory||state.folder)}">${escape((state.selectedDirectory||state.folder).split('/').pop())}</span>${button('refresh-folder','history','刷新文件夹')}${button('new-file','plus','在此文件夹新建文稿')}</div><div class="file-tree">${treeHTML(state.tree)||'<div class="folder-empty"><p>还没有文稿</p><button class="button" data-action="new-file">新建文稿</button></div>'}</div>`;
+  let html=`<div class="section-label">文件夹 <span>${state.workspaces.length}</span></div><div class="workspace-list">${state.workspaces.map(folder=>`<div class="workspace-row ${folder.path===state.folder?'active':''}"><button class="workspace-select" data-workspace="${escape(folder.path)}" title="${escape(folder.path)}">${icon('folder')}<span>${escape(basename(folder.path))}</span><small class="workspace-count">${countFiles(folder.tree)}</small></button><button class="workspace-remove" data-remove-workspace="${escape(folder.path)}" title="从列表移除，保留磁盘文件" aria-label="移除文件夹">${icon('close')}</button></div>`).join('')}</div>`;
+  if(state.folder) html+=`<div class="folder-files-header"><span title="${escape(state.selectedDirectory||state.folder)}">${escape(basename(state.selectedDirectory||state.folder))}</span>${button('refresh-folder','history','刷新文件夹')}${button('new-file','plus','在此文件夹新建文稿')}</div><div class="file-tree">${treeHTML(state.tree)||'<div class="folder-empty"><p>还没有文稿</p><button class="button" data-action="new-file">新建文稿</button></div>'}</div>`;
   else {
     html+=`<div class="folder-empty"><div class="folder-empty-icon">${icon('folder')}</div><p>让文字有一个家</p><span>可以同时添加多个文件夹。</span><button class="button" data-action="open-folder">添加文件夹 ${icon('plus')}</button></div>`;
     html+=`<div class="section-label">独立文稿</div><div class="file-tree">${state.documents.filter(doc=>doc.name.toLowerCase().includes(state.filter.toLowerCase())).map(doc=>`<button class="file-row ${doc.id===state.activeId?'active':''}" data-document="${doc.id}"><span class="file-icon">${icon(doc.guide?'leaf':'file')}</span><span class="file-name">${escape(doc.name.replace(/\.md$/i,''))}</span>${doc.dirty?'<span class="tab-dot"></span>':''}</button>`).join('')}</div>`;
@@ -196,6 +199,7 @@ async function createEditor(doc) {
   });
 }
 async function openDocument(input) {
+  if(input.guide)input={...input,content:shortcut(input.content)};
   const existing=input.path&&state.documents.find(doc=>doc.path===input.path);
   if(existing){await activate(existing.id);return existing;}
   const doc={id:uid(),path:null,name:'未命名.md',content:'',savedContent:'',dirty:false,...input};
@@ -342,7 +346,7 @@ async function openLink(href,doc) {
   if(href.startsWith('#')){const target=$(`[id="${CSS.escape(decodeURIComponent(href.slice(1)))}"]`,editor.vditor.element);target?.scrollIntoView({behavior:'smooth'});return;}
   if(/^(https?:|mailto:)/i.test(href)){await api.openExternal(href);return;}
   if(doc.path&&/\.(md|markdown|mdown|mkd)(#.*)?$/i.test(href)){
-    const parts=doc.path.split('/');parts.pop();for(const part of decodeURIComponent(href.split('#')[0]).split('/')){if(part==='..')parts.pop();else if(part!=='.')parts.push(part);}await openDocument(await api.readFile(parts.join('/')));
+    await openDocument(await api.readRelativeFile({documentPath:doc.path,src:href.split('#')[0]}));
   }
 }
 function displayImageHTML(html,doc) {
@@ -350,12 +354,10 @@ function displayImageHTML(html,doc) {
   const template=document.createElement('template');template.innerHTML=html;
   $$('img',template.content).forEach(image=>{
     const raw=image.dataset.originalSrc||image.getAttribute('src');
-    if(!raw||/^(data:|https?:|mojian-file:)/i.test(raw))return;
+    if(!raw||/^(data:|blob:|https?:|mojian-file:)/i.test(raw))return;
     try{
-      if(!doc.path&&!doc.sourcePath&&!raw.startsWith('file:')&&!raw.startsWith('/'))return;
-      const url=new URL(raw,`file://${doc.path||doc.sourcePath||'/'}`);
-      if(url.protocol!=='file:')return;
-      image.dataset.originalSrc=raw;image.src=api.assetUrl(decodeURIComponent(url.pathname));
+      if(!doc.path&&!doc.sourcePath&&!/^(?:file:|[\\/]|[a-z]:[\\/])/i.test(raw))return;
+      image.dataset.originalSrc=raw;image.src=localImageUrl(doc.path||doc.sourcePath,raw);
     }catch{}
   });
   return template.innerHTML;
@@ -396,7 +398,7 @@ function preferences() {
   <label class="form-row"><span><strong>正文宽度</strong><small>长文阅读时的舒适行宽</small></span><select data-setting="editorWidth">${[640,720,780,900,1100].map(n=>`<option value="${n}" ${Number(s.editorWidth)===n?'selected':''}>${n} px</option>`).join('')}</select></label>
   <label class="form-row"><span><strong>自动保存</strong><small>停止输入后，保存已命名的文稿</small></span><input type="checkbox" class="toggle" data-setting="autoSave" ${s.autoSave?'checked':''}></label>
   <label class="form-row"><span><strong>打字机模式</strong><small>让当前段落停在视野中央</small></span><input type="checkbox" class="toggle" data-setting="typewriter" ${s.typewriter?'checked':''}></label>
-  <label class="form-row"><span><strong>拼写检查</strong><small>使用 macOS 提供的检查功能</small></span><input type="checkbox" class="toggle" data-setting="spellcheck" ${s.spellcheck?'checked':''}></label>
+  <label class="form-row"><span><strong>拼写检查</strong><small>使用系统提供的检查功能</small></span><input type="checkbox" class="toggle" data-setting="spellcheck" ${s.spellcheck?'checked':''}></label>
   <p class="settings-note">文稿、恢复副本与设置均保存在本机。历史版本最多保留每个文件最近 40 次保存前的内容。</p>`,`<button class="button primary" data-action="close-modal">开始写作</button>`,'preferences-modal');
 }
 const commands=[
@@ -410,7 +412,7 @@ function palette(filesOnly=false) {
     const files=new Map();state.documents.forEach(doc=>files.set(doc.path||doc.id,{name:doc.name,document:doc.id}));
     const walk=nodes=>nodes.forEach(n=>n.type==='directory'?walk(n.children||[]):files.set(n.path,{name:n.name,path:n.path}));state.workspaces.forEach(folder=>walk(folder.tree));state.recent.forEach(doc=>{if(!files.has(doc.path))files.set(doc.path,doc);});
     for(const [key,doc] of files)if(doc.name.toLowerCase().includes(query))results.push({name:doc.name,detail:doc.path||'已打开的文稿',glyph:'file',path:doc.path,document:doc.document});
-    $('#palette-list').innerHTML=results.slice(0,40).map((r,i)=>`<button class="palette-item ${i===0?'active':''}" ${r.action?`data-command="${r.action}"`:r.document?`data-palette-document="${r.document}"`:`data-palette-path="${escape(r.path)}"`}>${icon(r.glyph)}<span><strong>${escape(r.name)}</strong><small>${escape(r.detail)}</small></span><kbd class="palette-shortcut">${r.shortcut||''}</kbd></button>`).join('')||'<p class="palette-empty">没有找到匹配项。</p>';
+    $('#palette-list').innerHTML=results.slice(0,40).map((r,i)=>`<button class="palette-item ${i===0?'active':''}" ${r.action?`data-command="${r.action}"`:r.document?`data-palette-document="${r.document}"`:`data-palette-path="${escape(r.path)}"`}>${icon(r.glyph)}<span><strong>${escape(r.name)}</strong><small>${escape(r.detail)}</small></span><kbd class="palette-shortcut">${shortcut(r.shortcut||'')}</kbd></button>`).join('')||'<p class="palette-empty">没有找到匹配项。</p>';
   };
   $('#palette-input').addEventListener('input',list);list();$('#palette-input').focus();
   $('#palette-input').addEventListener('keydown',event=>{
@@ -487,7 +489,7 @@ async function execute(command) {
     case 'new-file': {
       if(!state.folder)return execute('new');
       const directory=state.selectedDirectory||state.folder;
-      showModal('新建文稿',`<p class="modal-description">保存到 ${escape(directory.split('/').pop())} 文件夹，之后自动保存。</p><label class="input-label">文稿名称<input id="new-file-name" value="未命名文稿.md" autocomplete="off"></label>`,`<button class="button" data-action="close-modal">取消</button><button class="button primary" data-action="create-file">新建文稿</button>`);
+      showModal('新建文稿',`<p class="modal-description">保存到 ${escape(basename(directory))} 文件夹，之后自动保存。</p><label class="input-label">文稿名称<input id="new-file-name" value="未命名文稿.md" autocomplete="off"></label>`,`<button class="button" data-action="close-modal">取消</button><button class="button primary" data-action="create-file">新建文稿</button>`);
       $('.modal').dataset.directory=directory;setTimeout(()=>{const input=$('#new-file-name');input?.setSelectionRange(0,input.value.replace(/\.md$/i,'').length);},50);break;
     }
     case 'create-file': {

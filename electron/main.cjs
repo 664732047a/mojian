@@ -5,6 +5,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFile } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
+const { localReferencePath, windowChrome } = require('./platform.cjs');
 const { atomicWrite, readJSON, listTree, isWithin, VersionStore, migrateMarkdownImages, createMarkdownFile, MARKDOWN_EXTENSIONS, IMAGE_EXTENSIONS } = require('./file-store.cjs');
 
 app.setName('墨笺');
@@ -216,15 +217,26 @@ async function exportDocument(options) {
 function buildMenu() {
   const action = (label, command, accelerator) => ({ label, accelerator, click: () => menu(command) });
   const recent = recentFiles.slice(0, 10).map(item => ({ label: item.name, sublabel: item.path, click: () => deliverDocument(item.path) }));
-  Menu.setApplicationMenu(Menu.buildFromTemplate([
+  const template = [
     { label: '墨笺', submenu: [{ role: 'about', label: '关于墨笺' }, { type: 'separator' }, action('偏好设置…', 'preferences', 'CmdOrCtrl+,'), { type: 'separator' }, { role: 'services', label: '服务' }, { type: 'separator' }, { role: 'hide', label: '隐藏墨笺' }, { role: 'hideOthers', label: '隐藏其他' }, { role: 'unhide', label: '显示全部' }, { type: 'separator' }, { role: 'quit', label: '退出墨笺' }] },
     { label: '文件', submenu: [action('新建文档', 'new', 'CmdOrCtrl+N'), action('打开文档…', 'open', 'CmdOrCtrl+O'), action('打开文件夹…', 'open-folder', 'CmdOrCtrl+Shift+O'), { label: '最近打开', submenu: recent.length ? recent : [{ label: '暂无最近文档', enabled: false }] }, { type: 'separator' }, action('保存', 'save', 'CmdOrCtrl+S'), action('另存为…', 'save-as', 'CmdOrCtrl+Shift+S'), { type: 'separator' }, { label: '导出', submenu: [action('PDF 文档…', 'export-pdf'), action('HTML 网页…', 'export-html')] }, { type: 'separator' }, action('关闭标签页', 'close-tab', 'CmdOrCtrl+W')] },
     { label: '编辑', submenu: [{ role: 'undo', label: '撤销' }, { role: 'redo', label: '重做' }, { type: 'separator' }, { role: 'cut', label: '剪切' }, { role: 'copy', label: '复制' }, { role: 'paste', label: '粘贴' }, { role: 'pasteAndMatchStyle', label: '粘贴为纯文本' }, { role: 'selectAll', label: '全选' }, { type: 'separator' }, action('查找', 'find', 'CmdOrCtrl+F'), action('查找与替换', 'replace', 'CmdOrCtrl+Shift+H')] },
     { label: '格式', submenu: [action('粗体', 'bold', 'CmdOrCtrl+B'), action('斜体', 'italic', 'CmdOrCtrl+I'), action('删除线', 'strike', 'CmdOrCtrl+Shift+X'), { type: 'separator' }, ...[1, 2, 3, 4, 5, 6].map(level => action(`${level} 级标题`, `heading-${level}`, `CmdOrCtrl+${level}`)), { type: 'separator' }, action('链接…', 'link', 'CmdOrCtrl+K'), action('图片…', 'image', 'CmdOrCtrl+Shift+I'), action('表格', 'table', 'CmdOrCtrl+Alt+T'), action('代码块', 'code', 'CmdOrCtrl+Alt+C'), action('引用', 'quote', 'CmdOrCtrl+Shift+Q'), action('无序列表', 'list'), action('任务列表', 'check')] },
     { label: '视图', submenu: [action('文件侧栏', 'toggle-sidebar', 'CmdOrCtrl+Shift+L'), action('文档大纲', 'toggle-outline', 'CmdOrCtrl+Shift+T'), action('源码模式', 'toggle-source', 'CmdOrCtrl+/'), { type: 'separator' }, action('专注模式', 'toggle-focus', 'CmdOrCtrl+Shift+F'), action('打字机模式', 'toggle-typewriter'), action('命令面板', 'command-palette', 'CmdOrCtrl+Shift+P'), { type: 'separator' }, { role: 'resetZoom', label: '实际大小' }, { role: 'zoomIn', label: '放大' }, { role: 'zoomOut', label: '缩小' }, { type: 'separator' }, { role: 'togglefullscreen', label: '进入全屏' }] },
     { label: '窗口', submenu: [{ role: 'minimize', label: '最小化' }, { role: 'zoom', label: '缩放' }, { type: 'separator' }, { role: 'front', label: '全部前置' }] },
-    { label: '帮助', submenu: [action('快速入门', 'welcome'), action('Markdown 语法指南', 'markdown-guide'), { label: '在访达中显示数据文件夹', click: () => shell.showItemInFolder(dataPath('settings.json')) }] },
-  ]));
+    { label: '帮助', submenu: [action('快速入门', 'welcome'), action('Markdown 语法指南', 'markdown-guide'), { label: process.platform === 'darwin' ? '在访达中显示数据文件夹' : '在资源管理器中显示数据文件夹', click: () => shell.showItemInFolder(dataPath('settings.json')) }] },
+  ];
+  if (process.platform !== 'darwin') {
+    template.shift();
+    template.find(item => item.label === '文件').submenu.push({ type: 'separator' }, { role: 'quit', label: '退出墨笺', accelerator: 'Alt+F4' });
+    template.find(item => item.label === '编辑').submenu.push({ type: 'separator' }, action('偏好设置…', 'preferences', 'CmdOrCtrl+,'));
+    template.find(item => item.label === '帮助').submenu.push({ type: 'separator' }, { label: '关于墨笺', click: () => app.showAboutPanel() });
+    template.find(item => item.label === '窗口').submenu = [
+      { role: 'minimize', label: '最小化' },
+      { label: '最大化 / 还原', click: () => { if (!window) return; window.isMaximized() ? window.unmaximize() : window.maximize(); } },
+    ];
+  }
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 function installIPC() {
@@ -245,6 +257,12 @@ function installIPC() {
     return { path: folderPath, tree: await listTree(folderPath) };
   });
   handle('read-file', readDocument);
+  handle('read-relative-file', async ({ documentPath, src }) => {
+    const safeDocument = await requirePath(documentPath);
+    const filePath = localReferencePath(safeDocument, assertString(src, 8192));
+    if (!MARKDOWN_EXTENSIONS.has(path.extname(filePath).toLowerCase())) throw new Error('这个链接不是 Markdown 文稿。');
+    return readDocument(filePath);
+  });
   handle('save-file', saveDocument);
   handle('list-folder', async folderPath => listTree(await requirePath(folderPath)));
   handle('watch-folder', watchFolder);
@@ -276,13 +294,8 @@ function installIPC() {
   handle('resolve-asset', async ({ documentPath, src }) => {
     assertString(src, 8192);
     if (/^(https?:|data:image\/|mojian-file:)/i.test(src)) return src;
-    let filePath;
-    if (src.startsWith('file:')) filePath = require('node:url').fileURLToPath(src);
-    else {
-      if (!documentPath) return src;
-      const safeDocumentPath = await requirePath(documentPath, true);
-      filePath = path.resolve(path.dirname(safeDocumentPath), decodeURIComponent(src));
-    }
+    const safeDocumentPath = documentPath ? await requirePath(documentPath, true) : null;
+    const filePath = localReferencePath(safeDocumentPath, src);
     const safePath = await requirePath(filePath);
     return `mojian-file://local/?path=${encodeURIComponent(safePath)}`;
   });
@@ -337,7 +350,8 @@ function createWindow() {
   rendererReady = false;
   window = new BrowserWindow({
     title: '墨笺', width: 1360, height: 900, minWidth: 860, minHeight: 580,
-    titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 20, y: 19 },
+    ...windowChrome(),
+    icon: path.join(__dirname, '..', 'dist', 'icon.png'),
     backgroundColor: '#fbfaf7', show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: true },
   });
@@ -413,7 +427,14 @@ else {
     for (const item of recentFiles) await grantRoot(path.dirname(item.path)).catch(() => {});
     protocol.handle('mojian-file', async request => {
       try {
-        const filePath = await requirePath(new URL(request.url).searchParams.get('path'));
+        const parameters = new URL(request.url).searchParams;
+        let requestedPath = parameters.get('path');
+        if (!requestedPath) {
+          const documentPath = parameters.get('documentPath');
+          const safeDocument = documentPath ? await requirePath(documentPath, true) : null;
+          requestedPath = localReferencePath(safeDocument, assertString(parameters.get('src'), 8192));
+        }
+        const filePath = await requirePath(requestedPath);
         if (!imageExtensions.has(path.extname(filePath).toLowerCase())) return new Response('Unsupported image', { status: 415 });
         return net.fetch(pathToFileURL(filePath).href);
       } catch { return new Response('Image unavailable', { status: 404 }); }
