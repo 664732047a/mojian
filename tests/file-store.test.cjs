@@ -35,6 +35,39 @@ test('saving replaces the full Unicode document and preserves its permissions', 
   assert.deepEqual(await fs.readdir(directory), ['中文 空格.md']);
 });
 
+test('atomic saving survives a temporary Windows file lock without deleting the original', async t => {
+  const directory = await temporary(t);
+  const filePath = path.join(directory, 'locked.md');
+  await fs.writeFile(filePath, 'original');
+  const rename = fs.rename;
+  let calls = 0;
+  const mock = t.mock.method(fs, 'rename', async (from, to) => {
+    if (++calls === 1) {
+      assert.equal(await fs.readFile(filePath, 'utf8'), 'original');
+      throw Object.assign(new Error('locked'), { code: 'EPERM' });
+    }
+    return rename(from, to);
+  });
+  await atomicWrite(filePath, 'saved 中文');
+  mock.mock.restore();
+  assert.equal(calls, 2);
+  assert.equal(await fs.readFile(filePath, 'utf8'), 'saved 中文');
+  assert.deepEqual(await fs.readdir(directory), ['locked.md']);
+});
+
+test('a persistent save error preserves the original and removes its temporary file', async t => {
+  const directory = await temporary(t);
+  const filePath = path.join(directory, 'locked.md');
+  await fs.writeFile(filePath, 'original');
+  const mock = t.mock.method(fs, 'rename', async () => {
+    throw Object.assign(new Error('locked'), { code: 'EACCES' });
+  });
+  await assert.rejects(atomicWrite(filePath, 'unsaved'), { code: 'EACCES' });
+  mock.mock.restore();
+  assert.equal(await fs.readFile(filePath, 'utf8'), 'original');
+  assert.deepEqual(await fs.readdir(directory), ['locked.md']);
+});
+
 test('folder browser includes Markdown and skips hidden, generated and symbolic-link directories', async t => {
   const directory = await temporary(t);
   await fs.mkdir(path.join(directory, '笔记'));

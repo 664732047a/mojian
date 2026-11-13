@@ -1,6 +1,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { setTimeout: delay } = require('node:timers/promises');
 const { validateDocumentName } = require('./platform.cjs');
 const { fileURLToPath } = require('node:url');
 
@@ -16,7 +17,15 @@ async function atomicWrite(filePath, content) {
   try { mode = (await fs.stat(filePath)).mode; } catch (error) { if (error.code !== 'ENOENT') throw error; }
   try {
     await fs.writeFile(temporaryPath, content, mode ? { mode } : undefined);
-    await fs.rename(temporaryPath, filePath);
+    // Windows can briefly lock the destination while it is being read or scanned.
+    // Keep the original intact and retry the atomic replacement for a bounded time.
+    for (let attempt = 0; ; attempt++) {
+      try { await fs.rename(temporaryPath, filePath); break; }
+      catch (error) {
+        if (!['EPERM', 'EACCES', 'EBUSY'].includes(error.code) || attempt >= 6) throw error;
+        await delay(25 * 2 ** attempt);
+      }
+    }
   } finally { await fs.rm(temporaryPath, { force: true }).catch(() => {}); }
 }
 
