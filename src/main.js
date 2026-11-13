@@ -382,7 +382,7 @@ function showModal(title,body,footer='',className='') {
   if(range&&editor?.vditor.element.contains(range.commonAncestorContainer))savedEditorRange=range.cloneRange();
   if(modalResolve){modalResolve(null);modalResolve=null;}
   $('#modal-root').innerHTML=`<div class="modal-backdrop"><section class="modal ${className}" role="dialog" aria-modal="true" aria-label="${escape(title)}"><div class="modal-header"><h2>${escape(title)}</h2>${button('close-modal','close','关闭')}</div><div class="modal-body">${body}</div>${footer?`<div class="modal-footer">${footer}</div>`:''}</section></div>`;
-  setTimeout(()=>$('.modal input, .modal select, .modal .button.primary, .modal button')?.focus(),30);
+  ($('.modal input, .modal select')||$('.modal .button.primary')||$('.modal button'))?.focus();
 }
 function closeModal(value=null) {$('#modal-root').innerHTML='';if(savedEditorRange){try{const selection=getSelection();selection.removeAllRanges();selection.addRange(savedEditorRange);}catch{}savedEditorRange=null;}const resolve=modalResolve;modalResolve=null;resolve?.(value);}
 function choice(title,message,choices) {
@@ -490,7 +490,7 @@ async function execute(command) {
       if(!state.folder)return execute('new');
       const directory=state.selectedDirectory||state.folder;
       showModal('新建文稿',`<p class="modal-description">保存到 ${escape(basename(directory))} 文件夹，之后自动保存。</p><label class="input-label">文稿名称<input id="new-file-name" value="未命名文稿.md" autocomplete="off"></label>`,`<button class="button" data-action="close-modal">取消</button><button class="button primary" data-action="create-file">新建文稿</button>`);
-      $('.modal').dataset.directory=directory;setTimeout(()=>{const input=$('#new-file-name');input?.setSelectionRange(0,input.value.replace(/\.md$/i,'').length);},50);break;
+      $('.modal').dataset.directory=directory;const input=$('#new-file-name');input.setSelectionRange(0,input.value.replace(/\.md$/i,'').length);break;
     }
     case 'create-file': {
       const name=$('#new-file-name').value.trim();const directory=$('.modal').dataset.directory;
